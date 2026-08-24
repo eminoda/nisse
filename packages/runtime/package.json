@@ -1,0 +1,27 @@
+{
+  "name": "@nisse/runtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/index.ts",
+    "lint": "eslint .",
+    "start": "node dist/index.js",
+    "pretest": "pnpm --filter @nisse/mcp-demo build",
+    "test": "pnpm run build && node --test test/*.test.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.7",
+    "ai": "^7.0.73",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@nisse/agent": "workspace:*",
+    "@nisse/shared": "workspace:*",
+    "hono": "^4.11.7"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.3"
+  }
+}

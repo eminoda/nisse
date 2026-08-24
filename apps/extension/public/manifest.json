@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "nisse",
+  "description": "Browser-first interaction, desktop-powered execution.",
+  "version": "0.1.0",
+  "permissions": ["sidePanel", "storage"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Open nisse"
+  },
+  "side_panel": {
+    "default_path": "index.html"
+  }
+}

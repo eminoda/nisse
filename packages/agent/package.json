@@ -1,0 +1,20 @@
+{
+  "name": "@nisse/agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "pretest": "pnpm --filter @nisse/shared build",
+    "test": "pnpm run build && node --test test/*.test.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@ai-sdk/deepseek": "^3.0.29",
+    "@nisse/shared": "workspace:*",
+    "ai": "^7.0.73",
+    "zod": "^3.25.76"
+  }
+}

@@ -44,18 +44,18 @@
 
 ## 1.1 初始化 Repository
 
-- [ ] 初始化 Git Repository
-- [ ] 初始化 pnpm workspace
-- [ ] 初始化 Turborepo
-- [ ] 创建根目录 `package.json`
-- [ ] 创建 `pnpm-workspace.yaml`
-- [ ] 创建 `turbo.json`
-- [ ] 配置统一 TypeScript
-- [ ] 配置统一 lint
-- [ ] 配置统一 format
-- [ ] 配置 `.gitignore`
-- [ ] 配置 `.editorconfig`
-- [ ] 创建 `.env.example`
+- [x] 初始化 Git Repository
+- [x] 初始化 pnpm workspace
+- [x] 初始化 Turborepo
+- [x] 创建根目录 `package.json`
+- [x] 创建 `pnpm-workspace.yaml`
+- [x] 创建 `turbo.json`
+- [x] 配置统一 TypeScript
+- [x] 配置统一 lint
+- [x] 配置统一 format
+- [x] 配置 `.gitignore`
+- [x] 配置 `.editorconfig`
+- [x] 创建 `.env.example`
 
 预期目录：
 
@@ -72,10 +72,10 @@ nisse/
 
 ## 验收
 
-- [ ] `pnpm install` 成功
-- [ ] `pnpm build` 能运行 Turborepo Pipeline
-- [ ] `pnpm typecheck` 可执行
-- [ ] `pnpm lint` 可执行
+- [x] `pnpm install` 成功
+- [x] `pnpm build` 能运行 Turborepo Pipeline
+- [x] `pnpm typecheck` 可执行
+- [x] `pnpm lint` 可执行
 
 ---
 
@@ -87,12 +87,12 @@ nisse/
 
 ## 2.1 初始化 Vue 3
 
-- [ ] 使用 Vue 官方初始化工具创建项目
-- [ ] 位置：`apps/extension`
-- [ ] Vue 3
-- [ ] TypeScript
-- [ ] Manifest V3
-- [ ] 支持 Extension Popup 或 Side Panel
+- [x] 使用 Vue 官方初始化工具创建项目
+- [x] 位置：`apps/extension`
+- [x] Vue 3
+- [x] TypeScript
+- [x] Manifest V3
+- [x] 支持 Extension Popup 或 Side Panel
 
 优先考虑 Chrome Side Panel 作为主 Chat UI。
 
@@ -100,15 +100,15 @@ nisse/
 
 实现：
 
-- [ ] Header
-- [ ] Runtime Status
-- [ ] Chat Message List
-- [ ] User Message
-- [ ] Assistant Message
-- [ ] Chat Input
-- [ ] Send Button
-- [ ] Loading State
-- [ ] Error State
+- [x] Header
+- [x] Runtime Status
+- [x] Chat Message List
+- [x] User Message
+- [x] Assistant Message
+- [x] Chat Input
+- [x] Send Button
+- [x] Loading State
+- [x] Error State
 
 暂时不连接真正 Agent。
 
@@ -135,10 +135,10 @@ Connections
 
 ## 验收
 
-- [ ] Extension 可以在 Chrome 加载
-- [ ] Side Panel / Popup 能正常打开
-- [ ] 可以发送 Mock Message
-- [ ] 能显示 Mock Assistant Response
+- [x] Extension 可以在 Chrome 加载
+- [x] Side Panel / Popup 能正常打开
+- [x] 可以发送 Mock Message
+- [x] 能显示 Mock Assistant Response
 
 ---
 
@@ -150,10 +150,10 @@ Connections
 
 ## 3.1 初始化 Tauri
 
-- [ ] 使用官方 `create-tauri-app`
-- [ ] 使用当前最新稳定 Tauri
-- [ ] UI 使用 Vue 3
-- [ ] 目录：`apps/desktop`
+- [x] 使用官方 `create-tauri-app`
+- [x] 使用当前最新稳定 Tauri
+- [x] UI 使用 Vue 3
+- [x] 目录：`apps/desktop`
 
 Desktop UI 不建设完整 Chat。
 
@@ -174,10 +174,10 @@ Agent: Ready / Not configured
 
 ## 3.2 System Tray
 
-- [ ] 增加 Tray Icon
-- [ ] Show
-- [ ] Hide
-- [ ] Quit
+- [x] 增加 Tray Icon
+- [x] Show
+- [x] Hide
+- [x] Quit
 
 关闭窗口时：
 
@@ -207,15 +207,15 @@ Tauri 负责：
 
 Windows：
 
-- [ ] 增加开机启动能力
-- [ ] Settings 可开关
+- [x] 增加开机启动能力
+- [x] Settings 可开关
 
 ## 验收
 
-- [ ] Windows 启动 Tauri
-- [ ] 关闭窗口后仍保留 Tray
-- [ ] Tray 可退出应用
-- [ ] Runtime 状态可查看
+- [x] Windows 启动 Tauri
+- [x] 关闭窗口后仍保留 Tray
+- [x] Tray 可退出应用
+- [x] Runtime 状态可查看
 
 ---
 
@@ -262,29 +262,29 @@ GET /api/runtime/status
 
 Server：
 
-- [ ] 只监听 `127.0.0.1`
-- [ ] 不监听 `0.0.0.0`
-- [ ] 实现 local runtime token
-- [ ] Authorization Bearer Token
-- [ ] Origin 白名单
-- [ ] 禁止 `Access-Control-Allow-Origin: *`
+- [x] 只监听 `127.0.0.1`
+- [x] 不监听 `0.0.0.0`
+- [x] 实现 local runtime token
+- [x] Authorization Bearer Token
+- [x] Origin 白名单
+- [x] 禁止 `Access-Control-Allow-Origin: *`
 
 ## 4.3 Runtime Token
 
 首次启动：
 
-- [ ] 生成随机 token
-- [ ] 安全持久化
+- [x] 生成随机 token
+- [x] 安全持久化
 - [ ] Extension 使用配对机制获取授权
 
 MVP 可以先实现开发模式固定 pairing flow，但禁止直接在源码硬编码生产 Token。
 
 ## 验收
 
-- [ ] Browser fetch 可以访问 Runtime
-- [ ] 无 Token 请求返回 401
-- [ ] 非法 Origin 被拒绝
-- [ ] `/status` 正常工作
+- [x] Browser fetch 可以访问 Runtime
+- [x] 无 Token 请求返回 401
+- [x] 非法 Origin 被拒绝
+- [x] `/status` 正常工作
 
 ---
 
@@ -296,7 +296,7 @@ MVP 可以先实现开发模式固定 pairing flow，但禁止直接在源码硬
 
 ## 5.1 Runtime Client
 
-Extension 创建统一：
+- [x] Extension 创建统一 `RuntimeClient`
 
 ```text
 RuntimeClient
@@ -314,7 +314,7 @@ runtime.approve()
 
 ## 5.2 Runtime Status
 
-Extension Header 显示：
+- [x] Extension Header 显示 Runtime 状态
 
 ```text
 nisse ● Connected
@@ -328,7 +328,7 @@ nisse ○ Desktop Offline
 
 ## 5.3 SSE
 
-实现 Runtime SSE endpoint。
+- [x] 实现 Runtime SSE endpoint
 
 建议：
 
@@ -350,9 +350,9 @@ notification.created
 
 ## 验收
 
-- [ ] Extension 能检测 Desktop Runtime
-- [ ] Desktop Offline 时有明确提示
-- [ ] SSE 可以持续收到测试事件
+- [x] Extension 能检测 Desktop Runtime
+- [x] Desktop Offline 时有明确提示
+- [x] SSE 可以持续收到测试事件
 
 ---
 
@@ -400,10 +400,10 @@ DeepSeekProvider
 
 支持：
 
-- [ ] API Key
-- [ ] Endpoint
-- [ ] Model
-- [ ] Test Connection
+- [x] API Key
+- [x] Endpoint
+- [x] Model
+- [x] Test Connection
 
 不要在 Agent 内写 DeepSeek-specific 判断。
 
@@ -414,6 +414,8 @@ DeepSeekProvider
 ```text
 ProviderRegistry
 ```
+
+- [x] ProviderRegistry
 
 未来可注册：
 
@@ -504,9 +506,9 @@ secretRef
 
 ## 验收
 
-- [ ] Secret 不进入普通配置文件
-- [ ] Secret 不返回 Chrome Extension
-- [ ] Secret 不出现在日志中
+- [x] Secret 不进入普通配置文件
+- [x] Secret 不返回 Chrome Extension
+- [x] Secret 不出现在日志中
 
 ---
 
@@ -522,13 +524,13 @@ Extension → Runtime → LLM → Extension
 
 ## 8.1 Vercel AI SDK
 
-使用当前最新稳定 Vercel AI SDK。
+- [x] 使用当前最新稳定 Vercel AI SDK。
 
-实现 Agent Runtime。
+- [x] 实现 Agent Runtime。
 
 ## 8.2 Chat API
 
-实现：
+- [x] 实现：
 
 ```text
 POST /api/chat
@@ -549,9 +551,9 @@ POST /api/chat
 
 MVP：
 
-- [ ] 创建 conversationId
-- [ ] 保存当前会话基本消息
-- [ ] Runtime 重启后可允许丢失早期实验数据
+- [x] 创建 conversationId
+- [x] 保存当前会话基本消息
+- [x] Runtime 重启后可允许丢失早期实验数据
 
 先不要构建复杂 Memory System。
 
@@ -575,6 +577,8 @@ MVP：
 
 ## 9.1 创建 Mock Tool
 
+- [x] 创建 `get_current_work_status` Mock Tool，返回 `bugs: 3`、`builds: 1`
+
 例如：
 
 ```text
@@ -591,6 +595,8 @@ get_current_work_status
 ```
 
 ## 9.2 Tool UI
+
+- [x] Extension 展示工具调用中的“正在查询工作状态...”和完成后的“✓ 查询完成”
 
 Extension 展示：
 
@@ -622,6 +628,8 @@ LLM 能主动选择 Mock Tool。
 
 使用当前官方 TypeScript MCP SDK。
 
+- [x] 引入官方 MCP TypeScript SDK
+
 支持：
 
 ```text
@@ -644,6 +652,8 @@ Streamable HTTP
 }
 ```
 
+- [x] 实现 MCP Server Registry 与配置校验
+
 ## 10.3 stdio
 
 支持：
@@ -658,6 +668,8 @@ spawn MCP Server
 node dist/index.js
 ```
 
+- [x] 支持通过 stdio 启动 MCP Server
+
 ## 10.4 Tool Discovery
 
 实现：
@@ -671,6 +683,8 @@ Tool Adapter
 ↓
 Vercel AI SDK Tools
 ```
+
+- [x] 实现 connect → listTools → Tool Adapter 流程
 
 ## 10.5 Tool Adapter
 
@@ -694,6 +708,8 @@ execute：
 MCP Client.callTool()
 ```
 
+- [x] 保留工具名称、描述、inputSchema，并转为 AI SDK Tool
+
 ## 10.6 Lifecycle
 
 实现：
@@ -705,12 +721,14 @@ restart
 health
 ```
 
+- [x] 实现 start、stop、restart、health 生命周期管理
+
 ## 验收
 
-- [ ] 一个独立 Demo MCP 可以 stdio 启动
-- [ ] Agent 可以发现 Tool
-- [ ] Agent 可以调用 Tool
-- [ ] MCP 崩溃后 Runtime 有错误信息
+- [x] 一个独立 Demo MCP 可以 stdio 启动
+- [x] Agent 可以发现 Tool
+- [x] Agent 可以调用 Tool
+- [x] MCP 崩溃后 Runtime 有错误信息
 
 ---
 
@@ -735,6 +753,8 @@ Connection {
 }
 ```
 
+- [x] 定义 Connection Model 与状态类型
+
 ## 11.2 Dynamic Schema
 
 支持 MCP 声明：
@@ -754,9 +774,13 @@ number
 boolean
 ```
 
+- [x] 支持 text、password、url、select、number、boolean 字段
+
 ## 11.3 Dynamic UI
 
 Extension 根据 Schema 自动生成 Connection Form。
+
+- [x] Extension 根据 Connection Schema 动态生成表单
 
 ## 11.4 Test Connection
 
@@ -766,9 +790,11 @@ Extension 根据 Schema 自动生成 Connection Form。
 Test Connection
 ```
 
+- [x] Runtime 提供统一保存与 Test Connection API
+
 ## 验收
 
-新增一个 Mock Connection Schema 时，不修改 Connections UI 代码即可自动生成表单。
+- [x] 新增一个 Mock Connection Schema 时，不修改 Connections UI 代码即可自动生成表单。
 
 ---
 
