@@ -9,11 +9,16 @@ const welcomeMessage: ChatMessage = {
   timestamp: "刚刚",
 };
 
+export type ToolStatus = {
+  toolName: string;
+  state: "running" | "completed" | "failed";
+};
+
 export function useMockChat() {
   const _messages = shallowRef<ChatMessage[]>([welcomeMessage]);
   const isSending = shallowRef(false);
   const errorMessage = shallowRef<string | null>(null);
-  const toolStatus = shallowRef<string | null>(null);
+  const toolStatus = shallowRef<ToolStatus | null>(null);
   const conversationId = shallowRef<string | undefined>();
   const hasMessages = computed(() => _messages.value.length > 0);
 
@@ -50,11 +55,18 @@ export function useMockChat() {
             const payload = JSON.parse(event.data) as {
               conversationId?: string;
               delta?: string;
+              toolName?: string;
             };
             if (payload.conversationId) conversationId.value = payload.conversationId;
-            if (event.type === "tool.started") toolStatus.value = "正在查询工作状态...";
-            if (event.type === "tool.completed") toolStatus.value = "✓ 查询完成";
-            if (event.type === "tool.failed") toolStatus.value = "工具执行失败";
+            if (event.type === "tool.started") {
+              toolStatus.value = { toolName: payload.toolName ?? "unknown", state: "running" };
+            }
+            if (event.type === "tool.completed") {
+              toolStatus.value = { toolName: payload.toolName ?? toolStatus.value?.toolName ?? "unknown", state: "completed" };
+            }
+            if (event.type === "tool.failed") {
+              toolStatus.value = { toolName: payload.toolName ?? toolStatus.value?.toolName ?? "unknown", state: "failed" };
+            }
             if (event.type === "message.delta" && payload.delta) {
               assistantMessage = {
                 ...assistantMessage,

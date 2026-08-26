@@ -3,14 +3,23 @@ import { streamSSE } from "hono/streaming";
 import type { ConnectionInput } from "@nisse/shared";
 import { ConnectionManager } from "./connections/manager.js";
 import type { RuntimeConfig } from "./config.js";
+import { ApprovalStore } from "./approvals/store.js";
+import { WatchManager } from "./watch/index.js";
+import { PairingManager } from "./pairing.js";
 
 function isAllowedOrigin(
   origin: string | undefined,
   allowedOrigins: readonly string[],
   allowChromeExtensionOrigins: boolean,
 ) {
+  const tauriOrigin =
+    origin === "http://tauri.localhost" ||
+    origin === "https://tauri.localhost" ||
+    origin === "tauri://localhost" ||
+    origin === "http://localhost:1420";
   return (
     !origin ||
+    tauriOrigin ||
     allowedOrigins.includes(origin) ||
     (allowChromeExtensionOrigins && origin.startsWith("chrome-extension://"))
   );
@@ -33,6 +42,9 @@ function applyCorsHeaders(
 export function createRuntimeApp(config: RuntimeConfig) {
   const app = new Hono();
   const connections = new ConnectionManager();
+  const approvals = config.approvalStore ?? new ApprovalStore();
+  const watches = config.watchManager ?? new WatchManager();
+  const pairing = config.pairingManager ?? new PairingManager(config.token);
 
   app.use("*", async (context, next) => {
     const origin = context.req.header("Origin");
@@ -51,8 +63,10 @@ export function createRuntimeApp(config: RuntimeConfig) {
       return response;
     }
 
+    const isPairingExchange = context.req.path === "/api/pairing/exchange" && context.req.method === "POST";
     const authorization = context.req.header("Authorization");
-    if (authorization !== `Bearer ${config.token}`) {
+    const bearer = authorization?.startsWith("Bearer ") ? authorization.slice(7) : "";
+    if (!isPairingExchange && authorization !== `Bearer ${config.token}` && !pairing.isSessionToken(bearer)) {
       const response = context.json({ error: "unauthorized" }, 401);
       applyCorsHeaders(
         response.headers,
@@ -106,6 +120,187 @@ export function createRuntimeApp(config: RuntimeConfig) {
       return context.json(
         { error: error instanceof Error ? error.message : "connection_test_failed" },
         400,
+      );
+    }
+  });
+
+  app.get("/api/pairing/code", (context) => context.json({ code: pairing.code }));
+
+  app.post("/api/pairing/exchange", async (context) => {
+    const body = await context.req.json<{ code?: string }>().catch(() => null);
+    if (!body?.code) return context.json({ error: "pairing_code_required" }, 400);
+    try {
+      return context.json(pairing.exchange(body.code));
+    } catch (error) {
+      return context.json({ error: error instanceof Error ? error.message : "pairing_failed" }, 401);
+    }
+  });
+
+  app.get("/api/watches", (context) => context.json({ watches: watches.list() }));
+
+  app.get("/api/dashboard/zentao", async (context) => {
+    const query = config.watchSources?.zentao_bugs;
+    if (!query) return context.json({ error: "zentao_not_configured" }, 503);
+    try {
+      const dashboard = await query();
+      return context.json({
+        dashboard: {
+          ...(dashboard && typeof dashboard === "object" ? dashboard : {}),
+          ...(config.zentaoWebUrl ? { webUrl: config.zentaoWebUrl } : {}),
+        },
+      });
+    } catch (error) {
+      return context.json(
+        { error: error instanceof Error ? error.message : "zentao_dashboard_failed" },
+        502,
+      );
+    }
+  });
+
+  app.get("/api/dashboard/zentao/bugs", async (context) => {
+    const query = config.dashboardSources?.bugs;
+    if (!query) return context.json({ error: "zentao_not_configured" }, 503);
+    try {
+      const dashboard = await query();
+      return context.json({
+        ...(dashboard && typeof dashboard === "object" ? dashboard : {}),
+        ...(config.zentaoWebUrl ? { webUrl: config.zentaoWebUrl } : {}),
+      });
+    } catch (error) {
+      return context.json(
+        { error: error instanceof Error ? error.message : "zentao_bugs_failed" },
+        502,
+      );
+    }
+  });
+
+  app.get("/api/dashboard/zentao/tasks", async (context) => {
+    const query = config.dashboardSources?.tasks;
+    if (!query) return context.json({ error: "zentao_not_configured" }, 503);
+    try {
+      const dashboard = await query();
+      return context.json({
+        ...(dashboard && typeof dashboard === "object" ? dashboard : {}),
+        ...(config.zentaoWebUrl ? { webUrl: config.zentaoWebUrl } : {}),
+      });
+    } catch (error) {
+      return context.json(
+        { error: error instanceof Error ? error.message : "zentao_tasks_failed" },
+        502,
+      );
+    }
+  });
+
+  app.get("/api/dashboard/zentao/cache/status", (context) => {
+    const getStatus = config.dashboardCacheActions?.getStatus;
+    if (!getStatus) return context.json({ error: "zentao_not_configured" }, 503);
+    return context.json({ status: getStatus() });
+  });
+
+  app.post("/api/dashboard/zentao/cache/projects/refresh", async (context) => {
+    const refresh = config.dashboardCacheActions?.refreshProjects;
+    if (!refresh) return context.json({ error: "zentao_not_configured" }, 503);
+    try {
+      return context.json({ result: await refresh() });
+    } catch (error) {
+      return context.json(
+        { error: error instanceof Error ? error.message : "zentao_projects_refresh_failed" },
+        502,
+      );
+    }
+  });
+
+  app.post("/api/dashboard/zentao/cache/executions/refresh", async (context) => {
+    const refresh = config.dashboardCacheActions?.refreshExecutions;
+    if (!refresh) return context.json({ error: "zentao_not_configured" }, 503);
+    try {
+      return context.json({ result: await refresh() });
+    } catch (error) {
+      return context.json(
+        { error: error instanceof Error ? error.message : "zentao_executions_refresh_failed" },
+        502,
+      );
+    }
+  });
+
+  app.post("/api/watches", async (context) => {
+    const body = await context.req.json<{
+      id?: string;
+      source?: string;
+      schedule?: { type?: string; intervalMs?: number };
+      enabled?: boolean;
+    }>().catch(() => null);
+    const source = body?.source?.trim();
+    const query = source ? config.watchSources?.[source] : undefined;
+    if (!source || !query || !body?.schedule?.type) {
+      return context.json({ error: "watch_source_and_schedule_required" }, 400);
+    }
+    const intervalMs = body.schedule.intervalMs;
+    const schedule = body.schedule.type === "manual"
+      ? { type: "manual" as const }
+      : body.schedule.type === "interval" && typeof intervalMs === "number" && Number.isInteger(intervalMs) && intervalMs > 0
+        ? { type: "interval" as const, intervalMs }
+        : undefined;
+    if (!schedule) return context.json({ error: "watch_schedule_invalid" }, 400);
+    try {
+      const watch = watches.register({
+        id: body.id?.trim() || `${source}-${Date.now()}`,
+        source,
+        schedule,
+        query,
+        enabled: body.enabled,
+      });
+      return context.json({ watch }, 201);
+    } catch (error) {
+      return context.json(
+        { error: error instanceof Error ? error.message : "watch_create_failed" },
+        409,
+      );
+    }
+  });
+
+  app.post("/api/watches/:id/run", async (context) => {
+    try {
+      const result = await watches.runNow(context.req.param("id"));
+      return context.json({ result });
+    } catch (error) {
+      return context.json(
+        { error: error instanceof Error ? error.message : "watch_run_failed" },
+        404,
+      );
+    }
+  });
+
+  app.delete("/api/watches/:id", (context) => {
+    try {
+      watches.unregister(context.req.param("id"));
+      return context.body(null, 204);
+    } catch (error) {
+      return context.json(
+        { error: error instanceof Error ? error.message : "watch_delete_failed" },
+        404,
+      );
+    }
+  });
+
+  app.post("/api/approvals/:id/approve", async (context) => {
+    try {
+      return context.json({ approval: await approvals.approve(context.req.param("id")) });
+    } catch (error) {
+      return context.json(
+        { error: error instanceof Error ? error.message : "approval_failed" },
+        error instanceof Error && error.message === "Approval not found" ? 404 : 409,
+      );
+    }
+  });
+
+  app.post("/api/approvals/:id/reject", (context) => {
+    try {
+      return context.json({ approval: approvals.reject(context.req.param("id")) });
+    } catch (error) {
+      return context.json(
+        { error: error instanceof Error ? error.message : "approval_rejection_failed" },
+        error instanceof Error && error.message === "Approval not found" ? 404 : 409,
       );
     }
   });
@@ -199,6 +394,18 @@ export function createRuntimeApp(config: RuntimeConfig) {
 
   app.get("/api/events", (context) => {
     return streamSSE(context, async (stream) => {
+      const queuedEvents: Array<{ type: string; data: unknown }> = [];
+      let wake: (() => void) | undefined;
+      const unsubscribeApproval = approvals.subscribe((event) => {
+        queuedEvents.push({ type: event.type, data: event.approval });
+        wake?.();
+        wake = undefined;
+      });
+      const unsubscribeWatch = watches.subscribe((event) => {
+        queuedEvents.push({ type: event.type, data: event });
+        wake?.();
+        wake = undefined;
+      });
       await stream.writeSSE({
         event: "runtime.ready",
         data: JSON.stringify({ status: "running", version: config.version }),
@@ -206,13 +413,30 @@ export function createRuntimeApp(config: RuntimeConfig) {
       });
 
       let heartbeat = 0;
-      while (!stream.aborted) {
-        await stream.sleep(15_000);
-        await stream.writeSSE({
-          event: "runtime.heartbeat",
-          data: JSON.stringify({ timestamp: new Date().toISOString() }),
-          id: `heartbeat-${heartbeat++}`,
-        });
+      try {
+        while (!stream.aborted) {
+          if (queuedEvents.length) {
+            const event = queuedEvents.shift()!;
+            await stream.writeSSE({ event: event.type, data: JSON.stringify(event.data) });
+          } else {
+            await Promise.race([
+              new Promise<void>((resolve) => {
+                wake = resolve;
+              }),
+              stream.sleep(15_000),
+            ]);
+            if (!queuedEvents.length && !stream.aborted) {
+              await stream.writeSSE({
+                event: "runtime.heartbeat",
+                data: JSON.stringify({ timestamp: new Date().toISOString() }),
+                id: `heartbeat-${heartbeat++}`,
+              });
+            }
+          }
+        }
+      } finally {
+        unsubscribeApproval();
+        unsubscribeWatch();
       }
     });
   });

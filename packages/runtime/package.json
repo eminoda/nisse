@@ -18,6 +18,8 @@
     "ai": "^7.0.73",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@nisse/agent": "workspace:*",
+    "@nisse/mcp-zentao": "workspace:*",
+    "@nisse/secret-store": "workspace:*",
     "@nisse/shared": "workspace:*",
     "hono": "^4.11.7"
   },

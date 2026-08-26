@@ -11,6 +11,37 @@ export interface RuntimeEvent {
   id?: string;
 }
 
+export interface ApprovalSummary {
+  approvalId: string;
+  tool: string;
+  arguments: Record<string, unknown>;
+  summary: string;
+  expiresAt: string;
+  status: "pending" | "approved" | "rejected" | "expired" | "failed";
+  result?: unknown;
+  error?: string;
+}
+
+export interface WatchSummary {
+  id: string;
+  source: string;
+  schedule: { type: "manual" } | { type: "interval"; intervalMs: number };
+  snapshot?: unknown;
+}
+
+export interface ZenTaoDashboard {
+  bugs: Array<Record<string, unknown>>;
+  tasks?: Array<Record<string, unknown>>;
+  projects: Array<{ project: { id: string | number; name?: string }; count: number }>;
+  webUrl?: string;
+  cacheReady?: boolean;
+}
+
+export interface ZenTaoCacheStatus {
+  projects: { status: "not_fetched" | "refreshing" | "ready" | "error"; count?: number };
+  executions: { status: "not_fetched" | "refreshing" | "ready" | "error"; count?: number };
+}
+
 export class RuntimeClientError extends Error {
   constructor(
     message: string,
@@ -32,11 +63,16 @@ export class RuntimeClient {
 
   constructor(options: RuntimeClientOptions = {}) {
     this.baseUrl = (options.baseUrl ?? "http://127.0.0.1:4317").replace(/\/$/, "");
-    this.token = options.token ?? import.meta.env.VITE_NISSE_RUNTIME_TOKEN ?? null;
+    const storedToken = typeof localStorage !== "undefined" ? localStorage.getItem("nisse.runtimeToken") : null;
+    this.token = options.token ?? storedToken ?? import.meta.env.VITE_NISSE_RUNTIME_TOKEN ?? null;
   }
 
   setToken(token: string | null) {
     this.token = token;
+    if (typeof localStorage !== "undefined") {
+      if (token) localStorage.setItem("nisse.runtimeToken", token);
+      else localStorage.removeItem("nisse.runtimeToken");
+    }
   }
 
   get hasToken() {
@@ -82,6 +118,118 @@ export class RuntimeClient {
     });
     if (!response.ok) throw new RuntimeClientError("Connection test failed", response.status);
     return ((await response.json()) as { connection: ConnectionSummary }).connection;
+  }
+
+  async pairWithAuthCode(code: string, signal?: AbortSignal) {
+    const response = await this.request("/api/pairing/exchange", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+      signal,
+    });
+    if (!response.ok) throw new RuntimeClientError("Desktop 配对失败", response.status);
+    const result = (await response.json()) as { token: string };
+    this.setToken(result.token);
+    return result;
+  }
+
+  async getWatches(signal?: AbortSignal) {
+    const response = await this.request("/api/watches", { signal });
+    if (!response.ok) throw new RuntimeClientError("Watch list request failed", response.status);
+    return ((await response.json()) as { watches: WatchSummary[] }).watches;
+  }
+
+  async getZenTaoDashboard(signal?: AbortSignal) {
+    const response = await this.request("/api/dashboard/zentao", { signal });
+    if (!response.ok) throw new RuntimeClientError("Dashboard request failed", response.status);
+    return ((await response.json()) as { dashboard: ZenTaoDashboard }).dashboard;
+  }
+
+  async getZenTaoBugs(signal?: AbortSignal) {
+    const response = await this.request("/api/dashboard/zentao/bugs", { signal });
+    if (!response.ok) throw new RuntimeClientError("Bug dashboard request failed", response.status);
+    return (await response.json()) as Pick<ZenTaoDashboard, "bugs" | "projects" | "webUrl">;
+  }
+
+  async getZenTaoTasks(signal?: AbortSignal) {
+    const response = await this.request("/api/dashboard/zentao/tasks", { signal });
+    if (!response.ok) throw new RuntimeClientError("Task dashboard request failed", response.status);
+    return (await response.json()) as Pick<ZenTaoDashboard, "tasks" | "webUrl" | "cacheReady">;
+  }
+
+  async getZenTaoCacheStatus(signal?: AbortSignal) {
+    const response = await this.request("/api/dashboard/zentao/cache/status", { signal });
+    if (!response.ok) throw new RuntimeClientError("禅道缓存状态查询失败", response.status);
+    return (await response.json()) as { status: ZenTaoCacheStatus };
+  }
+
+  async refreshZenTaoProjects(signal?: AbortSignal) {
+    const response = await this.request("/api/dashboard/zentao/cache/projects/refresh", {
+      method: "POST",
+      signal,
+    });
+    if (!response.ok) throw new RuntimeClientError("禅道项目缓存刷新失败", response.status);
+    return (await response.json()) as { result: { projects: number } };
+  }
+
+  async refreshZenTaoExecutions(signal?: AbortSignal) {
+    const response = await this.request("/api/dashboard/zentao/cache/executions/refresh", {
+      method: "POST",
+      signal,
+    });
+    if (!response.ok) throw new RuntimeClientError("禅道执行缓存刷新失败", response.status);
+    return (await response.json()) as { result: { projects: number; executions: number } };
+  }
+
+  async createWatch(input: {
+    id?: string;
+    source: string;
+    schedule: { type: "manual" } | { type: "interval"; intervalMs: number };
+    enabled?: boolean;
+  }, signal?: AbortSignal) {
+    const response = await this.request("/api/watches", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+      signal,
+    });
+    if (!response.ok) throw new RuntimeClientError("Watch creation failed", response.status);
+    return ((await response.json()) as { watch: WatchSummary }).watch;
+  }
+
+  async runWatch(id: string, signal?: AbortSignal) {
+    const response = await this.request(`/api/watches/${encodeURIComponent(id)}/run`, {
+      method: "POST",
+      signal,
+    });
+    if (!response.ok) throw new RuntimeClientError("Watch run failed", response.status);
+    return (await response.json()) as { result: unknown };
+  }
+
+  async deleteWatch(id: string, signal?: AbortSignal) {
+    const response = await this.request(`/api/watches/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      signal,
+    });
+    if (!response.ok) throw new RuntimeClientError("Watch deletion failed", response.status);
+  }
+
+  async approveApproval(id: string, signal?: AbortSignal) {
+    const response = await this.request(`/api/approvals/${encodeURIComponent(id)}/approve`, {
+      method: "POST",
+      signal,
+    });
+    if (!response.ok) throw new RuntimeClientError("Approval failed", response.status);
+    return ((await response.json()) as { approval: ApprovalSummary }).approval;
+  }
+
+  async rejectApproval(id: string, signal?: AbortSignal) {
+    const response = await this.request(`/api/approvals/${encodeURIComponent(id)}/reject`, {
+      method: "POST",
+      signal,
+    });
+    if (!response.ok) throw new RuntimeClientError("Rejection failed", response.status);
+    return ((await response.json()) as { approval: ApprovalSummary }).approval;
   }
 
   async subscribeEvents(

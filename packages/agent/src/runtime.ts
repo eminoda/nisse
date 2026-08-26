@@ -2,11 +2,15 @@ import { randomUUID } from "node:crypto";
 import { stepCountIs, streamText, type LanguageModel, type ModelMessage } from "ai";
 import type { ModelConfig } from "./types.js";
 import { providerRegistry, ProviderRegistry } from "./index.js";
-import { mockTools } from "./tools/mock-work-status.js";
+import {
+  createMockTools,
+  type ApprovalGateway,
+  type ZenTaoToolGateway,
+} from "./tools/mock-work-status.js";
 
 export interface AgentReplyStream {
   conversationId: string;
-  response: ReturnType<typeof streamText<typeof mockTools>>;
+  response: ReturnType<typeof streamText<ReturnType<typeof createMockTools>>>;
 }
 
 export class ConversationStore {
@@ -27,14 +31,18 @@ export class ConversationStore {
 export class AgentRuntime {
   private readonly model: LanguageModel;
   private readonly conversations: ConversationStore;
+  private readonly tools: ReturnType<typeof createMockTools>;
 
   constructor(
     config: ModelConfig,
     registry: ProviderRegistry = providerRegistry,
     conversations = new ConversationStore(),
+    approvalGateway?: ApprovalGateway,
+    zentao?: ZenTaoToolGateway,
   ) {
     this.model = registry.createModel(config);
     this.conversations = conversations;
+    this.tools = createMockTools(approvalGateway, zentao);
   }
 
   streamReply(message: string, conversationId?: string): AgentReplyStream {
@@ -44,7 +52,7 @@ export class AgentRuntime {
     const response = streamText({
       model: this.model,
       messages: conversation.messages,
-      tools: mockTools,
+      tools: this.tools,
       stopWhen: stepCountIs(5),
       onFinish: ({ text }) => {
         if (text) {

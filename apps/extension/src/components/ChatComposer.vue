@@ -42,7 +42,7 @@ function handleKeydown(event: KeyboardEvent) {
 
 <style scoped>
 .composer {
-  align-items: flex-end;
+  align-items: center;
   background: var(--color-surface-raised);
   border: 1px solid var(--color-border-strong);
   border-radius: 15px;
@@ -67,7 +67,8 @@ function handleKeydown(event: KeyboardEvent) {
   line-height: 1.5;
   max-height: 120px;
   outline: 0;
-  padding: 3px 0;
+  min-height: 24px;
+  padding: 2px 0;
   resize: none;
   width: 100%;
 }

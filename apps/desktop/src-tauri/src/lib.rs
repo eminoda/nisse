@@ -3,6 +3,7 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Manager, WindowEvent,
 };
+use std::{env, fs, path::PathBuf};
 
 fn secret_entry(key: &str) -> Result<keyring::Entry, String> {
     if key.is_empty()
@@ -40,6 +41,20 @@ fn secret_delete(key: String) -> Result<(), String> {
     }
 }
 
+#[tauri::command]
+fn runtime_token() -> Result<Option<String>, String> {
+    let home = env::var_os("USERPROFILE")
+        .or_else(|| env::var_os("HOME"))
+        .map(PathBuf::from)
+        .ok_or_else(|| "Home directory is unavailable".to_string())?;
+    let path = home.join(".nisse").join("runtime-token");
+    match fs::read_to_string(path) {
+        Ok(value) => Ok(Some(value.trim().to_string()).filter(|value| !value.is_empty())),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(error.to_string()),
+    }
+}
+
 fn show_main_window(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.show();
@@ -52,6 +67,7 @@ fn show_main_window(app: &AppHandle) {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
@@ -95,7 +111,12 @@ pub fn run() {
                 let _ = window.hide();
             }
         })
-        .invoke_handler(tauri::generate_handler![secret_set, secret_get, secret_delete])
+        .invoke_handler(tauri::generate_handler![
+            secret_set,
+            secret_get,
+            secret_delete,
+            runtime_token
+        ])
         .run(tauri::generate_context!())
         .expect("error while running nisse Runtime");
 }

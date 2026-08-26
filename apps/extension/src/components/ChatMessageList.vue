@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ChatMessage } from "../types";
+import { renderMarkdown } from "../utils/markdown";
 
 defineProps<{
   messages: readonly ChatMessage[];
@@ -23,7 +24,8 @@ defineProps<{
           <span>{{ message.role === "assistant" ? "nisse" : "你" }}</span>
           <time>{{ message.timestamp }}</time>
         </div>
-        <p>{{ message.content }}</p>
+        <div v-if="message.role === 'assistant'" class="markdown-content" v-html="renderMarkdown(message.content)"></div>
+        <p v-else>{{ message.content }}</p>
       </div>
     </article>
 
@@ -97,6 +99,66 @@ defineProps<{
   line-height: 1.65;
   margin: 0;
   white-space: pre-wrap;
+}
+
+.markdown-content {
+  color: var(--color-text);
+  font-size: 14px;
+  line-height: 1.65;
+}
+.markdown-content :deep(p) {
+  margin: 0 0 9px;
+}
+.markdown-content :deep(p:last-child) {
+  margin-bottom: 0;
+}
+.markdown-content :deep(h2),
+.markdown-content :deep(h3),
+.markdown-content :deep(h4) {
+  margin: 0 0 7px;
+}
+.markdown-content :deep(ul) {
+  margin: 5px 0 9px;
+  padding-left: 20px;
+}
+.markdown-content :deep(pre) {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow-x: auto;
+  padding: 10px;
+}
+.markdown-content :deep(code) {
+  background: var(--color-surface-raised);
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  padding: 1px 4px;
+}
+.markdown-content :deep(pre code) {
+  background: transparent;
+  padding: 0;
+}
+.markdown-content :deep(a) {
+  color: var(--color-accent);
+}
+.markdown-content :deep(table) {
+  border-collapse: collapse;
+  display: block;
+  margin: 8px 0;
+  max-width: 100%;
+  overflow-x: auto;
+  width: fit-content;
+}
+.markdown-content :deep(th),
+.markdown-content :deep(td) {
+  border: 1px solid var(--color-border-strong);
+  padding: 6px 9px;
+  text-align: left;
+  white-space: nowrap;
+}
+.markdown-content :deep(th) {
+  background: var(--color-surface-raised);
+  font-weight: 600;
 }
 
 .message--user .message-body p {

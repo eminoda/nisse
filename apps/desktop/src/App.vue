@@ -1,16 +1,151 @@
 <script setup lang="ts">
-import { onMounted, shallowRef } from "vue";
+import { invoke } from "@tauri-apps/api/core";
+import {
+  isPermissionGranted,
+  requestPermission,
+  sendNotification,
+} from "@tauri-apps/plugin-notification";
+import { onMounted, onUnmounted, shallowRef } from "vue";
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 
 const autoStart = shallowRef(false);
 const isUpdatingAutoStart = shallowRef(false);
+const runtimeOnline = shallowRef(false);
+const pairingCode = shallowRef("------");
+const runtimeBaseUrl = "http://127.0.0.1:4317";
+let notificationController: AbortController | undefined;
+let runtimeStatusTimer: number | undefined;
+
+async function getRuntimeToken() {
+  return import.meta.env.VITE_NISSE_RUNTIME_TOKEN || (await invoke<string | null>("runtime_token"));
+}
+
+async function refreshRuntimeStatus() {
+  try {
+    const token = await getRuntimeToken();
+    if (!token) {
+      runtimeOnline.value = false;
+      return;
+    }
+    const response = await fetch(`${runtimeBaseUrl}/api/runtime/status`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(1500),
+    });
+    runtimeOnline.value = response.ok;
+    if (response.ok) void refreshPairingCode();
+  } catch {
+    runtimeOnline.value = false;
+  }
+}
+
+async function refreshPairingCode() {
+  try {
+    const token = await getRuntimeToken();
+    if (!token) return;
+    const response = await fetch(`${runtimeBaseUrl}/api/pairing/code`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(1500),
+    });
+    if (response.ok) pairingCode.value = ((await response.json()) as { code: string }).code;
+  } catch {
+    pairingCode.value = "------";
+  }
+}
+
+async function watchRuntimeEvents(signal: AbortSignal) {
+  const token = await getRuntimeToken();
+  if (!token) return;
+
+  let response: Response;
+  try {
+    response = await fetch(`${runtimeBaseUrl}/api/events`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal,
+    });
+  } catch {
+    return;
+  }
+  if (!response.ok || !response.body) return;
+
+  let permission = await isPermissionGranted();
+  if (!permission) permission = (await requestPermission()) === "granted";
+  if (!permission) return;
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let eventType = "message";
+  let eventData: string[] = [];
+  const dispatch = () => {
+    if (eventType !== "watch.changed" || eventData.length === 0) return;
+    try {
+      const event = JSON.parse(eventData.join("\n")) as {
+        watch?: { source?: string; schedule?: { type?: string } };
+        diff?: { current?: { bugs?: unknown[] } };
+      };
+      if (event.watch?.schedule?.type !== "interval") return;
+      const count = event.diff?.current?.bugs?.length ?? 0;
+      void sendNotification({
+        title: "nisse · ZenTao 更新",
+        body: `${event.watch.source === "zentao_bugs" ? "我的 Bug" : "工作数据"} 已更新，当前有 ${count} 个待处理 Bug。`,
+      });
+    } catch {
+      // Ignore malformed events and keep the notification stream alive.
+    }
+  };
+
+  while (!signal.aborted) {
+    const { done, value } = await reader.read();
+    buffer += decoder.decode(value, { stream: !done });
+    const lines = buffer.split(/\r?\n/);
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      if (line === "") {
+        dispatch();
+        eventType = "message";
+        eventData = [];
+      } else if (line.startsWith("event:")) {
+        eventType = line.slice(6).trim();
+      } else if (line.startsWith("data:")) {
+        eventData.push(line.slice(5).trimStart());
+      }
+    }
+    if (done) return;
+  }
+  await reader.cancel();
+}
+
+async function startNotificationLoop(signal: AbortSignal) {
+  while (!signal.aborted) {
+    try {
+      await watchRuntimeEvents(signal);
+    } catch {
+      if (signal.aborted) break;
+    }
+    if (!signal.aborted) {
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 5000));
+    }
+  }
+}
 
 onMounted(async () => {
+  void refreshRuntimeStatus();
+  runtimeStatusTimer = window.setInterval(() => {
+    void refreshRuntimeStatus();
+  }, 5000);
   try {
     autoStart.value = await isEnabled();
   } catch {
     autoStart.value = false;
   }
+
+  notificationController = new AbortController();
+  void startNotificationLoop(notificationController.signal);
+});
+
+onUnmounted(() => {
+  notificationController?.abort();
+  if (runtimeStatusTimer !== undefined) window.clearInterval(runtimeStatusTimer);
 });
 
 async function toggleAutoStart() {
@@ -41,7 +176,9 @@ async function toggleAutoStart() {
       </div>
       <div class="header-actions">
         <span class="version-label">v0.1.0</span>
-        <span class="status-pill"><span class="status-dot"></span> Running</span>
+        <span class="status-pill" :class="{ 'status-pill--offline': !runtimeOnline }">
+          <span class="status-dot"></span> {{ runtimeOnline ? "Running" : "Offline" }}
+        </span>
       </div>
     </header>
 
@@ -90,11 +227,21 @@ async function toggleAutoStart() {
           <span></span>
         </button>
       </article>
+      <article class="settings-card pairing-card">
+        <div>
+          <p class="eyebrow">DESKTOP PAIRING</p>
+          <h3>浏览器插件配对码</h3>
+          <p>在浏览器插件设置中输入此配对码。Desktop 重启后会生成新的配对码。</p>
+        </div>
+        <strong class="pairing-code">{{ pairingCode }}</strong>
+      </article>
     </section>
 
     <footer class="runtime-footer">
       <span>127.0.0.1 · Local only</span>
-      <span class="footer-ready"><span class="status-dot"></span> Runtime ready</span>
+        <span class="footer-ready" :class="{ 'footer-ready--offline': !runtimeOnline }">
+          <span class="status-dot"></span> {{ runtimeOnline ? "Runtime ready" : "Runtime offline" }}
+        </span>
     </footer>
   </main>
 </template>
@@ -200,6 +347,11 @@ h1 {
   font-size: 11px;
   gap: 7px;
   padding: 6px 10px;
+}
+.status-pill--offline {
+  background: rgba(170, 181, 196, 0.08);
+  border-color: var(--border-strong);
+  color: var(--text-secondary);
 }
 .status-dot {
   background: var(--accent);
@@ -360,6 +512,15 @@ h1 {
 .footer-ready {
   color: var(--accent);
   gap: 7px;
+}
+.pairing-code {
+  color: var(--accent);
+  font-size: 21px;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+.footer-ready--offline {
+  color: var(--muted);
 }
 @media (max-width: 700px) {
   .runtime-header,

@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "identifier": "com.nisse.desktop",
   "build": {
-    "beforeDevCommand": "pnpm dev",
+    "beforeDevCommand": "pnpm --dir ../.. dev:desktop",
     "devUrl": "http://localhost:1420",
     "beforeBuildCommand": "pnpm build",
     "frontendDist": "../dist"

@@ -1,7 +1,11 @@
 import { createDeepSeek } from "@ai-sdk/deepseek";
-import { generateText } from "ai";
+import { generateText, wrapLanguageModel } from "ai";
 import type { LanguageModel } from "ai";
 import type { ModelConfig, ModelProvider, ConnectionTestResult } from "../types.js";
+import {
+  createToolStreamCompatibilityFetch,
+  createToolStreamCompatibilityMiddleware,
+} from "./tool-stream-compat.js";
 
 export class DeepSeekProvider implements ModelProvider {
   readonly id = "deepseek";
@@ -15,9 +19,13 @@ export class DeepSeekProvider implements ModelProvider {
     const provider = createDeepSeek({
       apiKey,
       ...(config.endpoint ? { baseURL: config.endpoint } : {}),
+      fetch: createToolStreamCompatibilityFetch(),
     });
 
-    return provider(config.model);
+    return wrapLanguageModel({
+      model: provider(config.model),
+      middleware: createToolStreamCompatibilityMiddleware(),
+    });
   }
 
   async testConnection(config: ModelConfig): Promise<ConnectionTestResult> {

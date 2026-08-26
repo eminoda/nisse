@@ -28,3 +28,4 @@ process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 export * from "./mcp/index.js";
 export * from "./connections/index.js";
+export * from "./watch/index.js";

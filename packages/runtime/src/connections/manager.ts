@@ -36,8 +36,28 @@ const mockSchema: ConnectionSchema = {
   ],
 };
 
+const zentaoSchema: ConnectionSchema = {
+  type: "zentao",
+  name: "禅道",
+  description: "连接禅道 API，供 nisse 查询和处理 Bug。",
+  fields: [
+    {
+      key: "endpoint",
+      label: "API 地址",
+      type: "url",
+      required: true,
+      placeholder: "https://zentao.example.com",
+    },
+    { key: "account", label: "账号", type: "text", required: true, placeholder: "admin" },
+    { key: "password", label: "密码", type: "password", required: true },
+  ],
+};
+
 export class ConnectionManager {
-  private readonly schemas = new Map<string, ConnectionSchema>([[mockSchema.type, mockSchema]]);
+  private readonly schemas = new Map<string, ConnectionSchema>([
+    [mockSchema.type, mockSchema],
+    [zentaoSchema.type, zentaoSchema],
+  ]);
   private readonly connections = new Map<string, StoredConnection>();
 
   registerSchema(schema: ConnectionSchema) {

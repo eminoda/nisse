@@ -198,10 +198,10 @@ Node Sidecar
 
 Tauri 负责：
 
-- [ ] 启动 Sidecar
-- [ ] Sidecar health check
-- [ ] Sidecar crash restart
-- [ ] App quit 时关闭 Sidecar
+- [x] 启动 Sidecar（开发模式）
+- [x] Sidecar health check
+- [x] Sidecar crash restart（开发模式）
+- [x] App quit 时关闭 Sidecar（开发模式）
 
 ## 3.4 Auto Start
 
@@ -275,7 +275,7 @@ Server：
 
 - [x] 生成随机 token
 - [x] 安全持久化
-- [ ] Extension 使用配对机制获取授权
+- [x] Extension 使用配对机制获取授权
 
 MVP 可以先实现开发模式固定 pairing flow，但禁止直接在源码硬编码生产 Token。
 
@@ -452,9 +452,9 @@ password type
 
 ## 验收
 
-- [ ] DeepSeek 可以通过真实 API 连通
-- [ ] 错误 Key 能展示明确错误
-- [ ] Agent 代码不依赖 DeepSeek 实现细节
+- [x] DeepSeek 可以通过真实 API 连通
+- [x] 错误 Key 能展示明确错误
+- [x] Agent 代码不依赖 DeepSeek 实现细节
 
 ---
 
@@ -577,7 +577,7 @@ MVP：
 
 ## 9.1 创建 Mock Tool
 
-- [x] 创建 `get_current_work_status` Mock Tool，返回 `bugs: 3`、`builds: 1`
+- [x] 创建 `get_current_work_status` Tool，返回 ZenTao 待处理 Bug 数量
 
 例如：
 
@@ -589,21 +589,22 @@ get_current_work_status
 
 ```json
 {
-  "bugs": 3,
-  "builds": 1
+  "bugs": 3
 }
 ```
 
 ## 9.2 Tool UI
 
-- [x] Extension 展示工具调用中的“正在查询工作状态...”和完成后的“✓ 查询完成”
+- [x] Extension 展示工具图标、工具名称、执行中/完成/失败状态
 
 Extension 展示：
 
 ```text
-正在查询工作状态...
+◌ 查询当前工作状态
+  执行中
 
-✓ 查询完成
+✓ 查询当前工作状态
+  已完成
 ```
 
 ## 验收
@@ -833,6 +834,9 @@ username
 password
 ```
 
+- [x] Connections 页面动态生成 endpoint、username、password 设置字段
+- [x] 密码使用 Secret 字段，不进入连接摘要
+
 ## 12.2 Service
 
 实现：
@@ -842,6 +846,8 @@ ZenTaoService
 ```
 
 所有 API 调用放 Service。
+
+- [x] ZenTaoService 统一处理认证、请求和错误
 
 ## 12.3 get_my_bugs
 
@@ -853,10 +859,10 @@ get_my_bugs
 
 支持：
 
-- [ ] 当前用户
-- [ ] 分页
-- [ ] 状态过滤
-- [ ] 项目过滤
+- [x] 当前用户
+- [x] 分页
+- [x] 状态过滤
+- [x] 项目过滤
 
 ## 12.4 get_bug_detail
 
@@ -872,6 +878,8 @@ get_bug_detail
 bugId
 ```
 
+- [x] 实现 Bug 详情查询
+
 ## 12.5 resolve_bug
 
 实现：
@@ -883,6 +891,8 @@ resolve_bug
 必须根据实际 ZenTao API 所需字段设计 Schema。
 
 不要臆造不存在的 API 参数。
+
+- [x] 实现并校验文档定义的解决字段
 
 ## 12.6 Risk Metadata
 
@@ -898,6 +908,8 @@ write
 approval required
 ```
 
+- [x] 声明 read/write 与 approval required 风险元数据
+
 ## 12.7 AGENT.md
 
 描述：
@@ -907,6 +919,8 @@ approval required
 - 推荐调用顺序
 - resolve_bug 风险
 - 不确定 Bug 时先查询详情
+
+- [x] 完成 ZenTao MCP AGENT.md
 
 ## 验收
 
@@ -935,6 +949,9 @@ risk
 approval
 ```
 
+- [x] Agent 的 ZenTao `resolve_bug` 通过通用 Approval Gateway 拦截，批准后才执行写 API
+- [x] Agent Approval Gateway 拦截 mock_write，批准前不执行
+
 ## 13.2 Pending Approval
 
 Runtime 创建：
@@ -946,6 +963,8 @@ arguments
 summary
 expiresAt
 ```
+
+- [x] Runtime 内存版 Pending Approval Store
 
 ## 13.3 Extension Approval Card
 
@@ -964,12 +983,16 @@ Fixed
 [确认解决]
 ```
 
+- [x] Extension Chat Approval Card
+
 ## 13.4 API
 
 ```text
 POST /api/approvals/:id/approve
 POST /api/approvals/:id/reject
 ```
+
+- [x] 实现 approve/reject API 与 approval SSE 事件
 
 ## 验收
 
@@ -987,11 +1010,10 @@ LLM 调用 `resolve_bug` 时，没有用户确认不能真正访问写 API。
 
 ## 14.1 Scheduler
 
-支持：
+- [x] 支持：
 
 ```text
 interval
-daily
 manual
 ```
 
@@ -1000,6 +1022,8 @@ manual
 定义：
 
 ```ts
+- [x] Watch 定义包含：
+
 Watch {
   id
   source
@@ -1012,11 +1036,11 @@ Watch {
 
 ## 14.3 Snapshot
 
-提供简单持久化。
+- [x] 提供 Runtime 内存快照。
 
 ## 14.4 Diff
 
-提供：
+- [x] 提供：
 
 ```text
 previous

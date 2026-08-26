@@ -7,4 +7,4 @@ export interface ChatMessage {
   timestamp: string;
 }
 
-export type ExtensionView = "chat" | "connections";
+export type ExtensionView = "dashboard" | "chat" | "connections";

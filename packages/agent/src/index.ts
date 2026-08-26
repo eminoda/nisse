@@ -1,7 +1,15 @@
 export { ProviderRegistry } from "./registry.js";
 export { DeepSeekProvider } from "./providers/deepseek.js";
 export { AgentRuntime, ConversationStore } from "./runtime.js";
-export { getCurrentWorkStatusTool, mockTools } from "./tools/mock-work-status.js";
+export { createMockTools, getCurrentWorkStatusTool, mockTools } from "./tools/mock-work-status.js";
+export type {
+  ApprovalGateway,
+  ApprovalRequest,
+  ZenTaoBugQuery,
+  ZenTaoTaskQuery,
+  ZenTaoResolveInput,
+  ZenTaoToolGateway,
+} from "./tools/mock-work-status.js";
 export type { ConnectionTestResult, ModelConfig, ModelProvider } from "./types.js";
 
 import { DeepSeekProvider } from "./providers/deepseek.js";
